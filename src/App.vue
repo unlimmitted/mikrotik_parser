@@ -18,7 +18,7 @@
 					type="button"
 					@click="setTab('ignoreVPN')"
 				>
-					ignoreVPN
+					{{ ignoreVPNLabel }}
 				</button>
 				<button
 					class="tab"
@@ -28,7 +28,7 @@
 					type="button"
 					@click="setTab('ignoreLanToVPN')"
 				>
-					ignoreLanToVPN
+					{{ ignoreLanToVPNLabel }}
 				</button>
 			</nav>
 		</header>
@@ -38,8 +38,8 @@
 			<section v-if="activeTab === 'ignoreVPN'" class="card">
 				<div class="card-header">
 					<div>
-						<div class="card-title">ignoreVPN</div>
-						<div class="card-desc">Поиск доменов/источников и включение/выключение ignore vpn</div>
+						<div class="card-title">{{ ignoreVPNLabel }}</div>
+						<div class="card-desc">Поиск доменов/источников и включение/выключение {{ ignoreVPNLabel }}</div>
 					</div>
 
 					<div class="status">
@@ -155,7 +155,7 @@
 								/>
 								<label class="toggle-label" :for="`vpn-${domain.id ?? domain.dstDns}`">
 									<span class="toggle-track"></span>
-									<span class="toggle-text">ignore vpn</span>
+									<span class="toggle-text">{{ ignoreVPNLabel }}</span>
 								</label>
 							</div>
 						</div>
@@ -175,9 +175,9 @@
 			<section v-else class="card">
 				<div class="card-header">
 					<div>
-						<div class="card-title">ignoreLanToVPN</div>
+						<div class="card-title">{{ ignoreLanToVPNLabel }}</div>
 						<div class="card-desc">
-							Ввод внутреннего адреса/подсети (IP или CIDR), которые нужно игнорировать для VPN
+							Ввод внутреннего адреса/подсети (IP или CIDR), которые нужно добавить в {{ ignoreLanToVPNLabel }}
 						</div>
 					</div>
 
@@ -245,7 +245,7 @@
 								/>
 								<label class="toggle-label" :for="`lan-${item.ip}`">
 									<span class="toggle-track"></span>
-									<span class="toggle-text">enabled</span>
+									<span class="toggle-text">{{ ignoreLanToVPNLabel }}</span>
 								</label>
 							</div>
 						</div>
@@ -272,6 +272,12 @@ export default {
 		// tabs
 		activeTab: 'ignoreVPN',
 
+		// config from backend env
+		appConfig: {
+			ignoreVPNListName: 'ignoreVpn',
+			ignoreLanToVpnListName: 'ignoreLanToVpn',
+		},
+
 		// tab1: ignoreVPN
 		domains: [],
 		filterStr: '',
@@ -290,6 +296,14 @@ export default {
 	}),
 
 	computed: {
+		ignoreVPNLabel() {
+			return this.appConfig.ignoreVPNListName || 'ignoreVpn'
+		},
+
+		ignoreLanToVPNLabel() {
+			return this.appConfig.ignoreLanToVpnListName || 'ignoreLanToVpn'
+		},
+
 		canSearch() {
 			return !!(this.filterStr && this.filterStr.trim().length > 0 && this.pickedSearchType)
 		},
@@ -317,6 +331,19 @@ export default {
 	},
 
 	methods: {
+		async fetchAppConfig() {
+			try {
+				const resp = await axios.get('/api/v1/config')
+				this.appConfig = {
+					ignoreVPNListName: String(resp.data?.ignoreVPNListName || 'ignoreVpn').trim(),
+					ignoreLanToVpnListName: String(resp.data?.ignoreLanToVpnListName || 'ignoreLanToVpn').trim(),
+				}
+			} catch (e) {
+				// оставляем дефолтные названия, чтобы UI не ломался при недоступности API
+				console.log(e)
+			}
+		},
+
 		async setTab(tab) {
 			this.activeTab = tab
 			this.syncUrl()
@@ -365,7 +392,7 @@ export default {
 			} catch (e) {
 				// откат UI при ошибке
 				domain.isIgnoreVpn = !domain.isIgnoreVpn
-				this.error = 'Не удалось обновить ignore vpn для домена.'
+				this.error = `Не удалось обновить ${this.ignoreVPNLabel} для домена.`
 				// eslint-disable-next-line no-console
 				console.log(e)
 			}
@@ -392,7 +419,7 @@ export default {
 					: []
 
 			} catch (e) {
-				this.lanError = 'Не удалось загрузить список ignoreLanToVPN.'
+				this.lanError = `Не удалось загрузить список ${this.ignoreLanToVPNLabel}.`
 				// eslint-disable-next-line no-console
 				console.log(e)
 			} finally {
@@ -419,7 +446,7 @@ export default {
 				this.lanIgnoreInput = ''
 				await this.fetchLanIgnoreList()
 			} catch (e) {
-				this.lanError = 'Не удалось добавить адрес в ignoreLanToVPN.'
+				this.lanError = `Не удалось добавить адрес в ${this.ignoreLanToVPNLabel}.`
 				console.log(e)
 			}
 		},
@@ -435,7 +462,7 @@ export default {
 				})
 			} catch (e) {
 				item.enabled = prev
-				this.lanError = 'Не удалось обновить enabled для ignoreLanToVPN.'
+				this.lanError = `Не удалось обновить ${this.ignoreLanToVPNLabel}.`
 				console.log(e)
 			}
 		},
@@ -477,6 +504,7 @@ export default {
 	},
 
 	async mounted() {
+		await this.fetchAppConfig()
 		this.restoreFromUrl()
 
 		// список вкладки 2 грузим сразу (можно грузить лениво при переключении)
