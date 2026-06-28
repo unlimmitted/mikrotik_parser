@@ -207,11 +207,11 @@ export default {
 
 .card-header {
 	display: flex;
-	align-items: flex-start;
 	justify-content: space-between;
 	gap: 16px;
 	padding: 18px 18px 14px;
 	border-bottom: 1px solid rgba(20, 18, 40, 0.08);
+  align-items: center;
 }
 
 .card-title { font-weight: 900; letter-spacing: 0.2px; }
